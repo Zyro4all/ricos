@@ -9,7 +9,7 @@ st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 # The URL from your Secrets
 SHEET_URL = st.secrets["spreadsheet_url"]
 # This is your Public CSV link for READING data (from Image 2)
-CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiZQMUDlM2wFrShtweDCgyTVkio04jMNX35Z-HUa35GasTfaPu-H7pNb_gQHSTLOqXeFAVMLBzQKc9/pub?output=csv"
+CSV_URL = "https://docs.google.com/spreadsheets/d/1VByNd7cFDO62STXib2h8s1L4YTyfmxygcymCOMBeAvE/edit?usp=sharing"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
