@@ -5,7 +5,15 @@ DB_FILE = "keys_database.json"
 
 def load_data():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f: return json.load(f)
+        with open(DB_FILE, "r") as f:
+            try:
+                data = json.load(f)
+                # Ensure all required keys exist to prevent KeyErrors
+                if "keys" not in data: data["keys"] = {}
+                if "names" not in data: data["names"] = {}
+                if "owner_key" not in data: data["owner_key"] = "RICOS-OWNER-ADMIN-999"
+                return data
+            except: pass
     return {"keys": {}, "names": {}, "owner_key": "RICOS-OWNER-ADMIN-999"}
 
 def save_data(data):
@@ -29,7 +37,6 @@ with col1:
         random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         new_key = f"RICOS-{prefix}-{random_str}"
         
-        # Save to database
         data["keys"][new_key] = duration
         data["names"][new_key] = user_name if user_name else "Unknown"
         save_data(data)
@@ -38,17 +45,20 @@ with col1:
 
 with col2:
     st.subheader("Key Database")
-    if not data["keys"]:
-        st.info("No active keys found.")
-    else:
-        for key, dur in list(data["keys"].items()):
-            name = data["names"].get(key, "N/A")
-            c1, c2, c3 = st.columns([2, 1, 1])
-            c1.text(f"👤 {name}\n🔑 {key}")
-            c2.text(f"⏳ {dur}")
-            if c3.button("DELETE", key=f"del_{key}"):
-                del data["keys"][key]
-                if key in data["names"]: del data["names"][key]
-                save_data(data)
-                st.rerun()
-            st.divider()
+    # list() prevents errors while deleting
+    for key, dur in list(data.get("keys", {}).items()):
+        name = data.get("names", {}).get(key, "N/A")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        c1.text(f"👤 {name}\n🔑 {key}")
+        c2.text(f"⏳ {dur}")
+        if c3.button("DELETE", key=f"del_{key}"):
+            del data["keys"][key]
+            if key in data["names"]: del data["names"][key]
+            save_data(data)
+            st.rerun()
+        st.divider()
+
+# --- PUBLIC RAW LINK FOR THE SNIPER ---
+st.sidebar.markdown("---")
+st.sidebar.write("### Sniper Connection Info")
+st.sidebar.info("Ensure your Sniper points to your GitHub Raw URL for keys_database.json")
