@@ -6,39 +6,40 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide", page_icon="💀")
 
-# --- 1. PASTE YOUR NEW LINK HERE ---
-CSV_URL = "PASTE_YOUR_NEW_CSV_LINK_HERE"
+# --- YOUR CUSTOM LINKS ---
+# The new link you just gave me
+CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3ni_JieyfjhMrwxKeSI2seJBb9xWPEfNPpiw1I09EkivalS4uAA6Sfy-S18Gs5Xgl9ICFHTmT5mS/pub?output=csv"
 
-# --- 2. THE FORM URL (Pre-filled for you) ---
+# Your Form submission link
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMaWmzPd-VnCu75dkYn-DYqPSgmyfcEC_uC-10E1sRD-BfSg/formResponse"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load data with a cache-buster to ensure it's always fresh
+# Load data with a 'cache-buster' so it doesn't show old data
 try:
-    # This random number forces Google to show the newest data immediately
+    # Adding a random number to the URL forces Google to refresh the data
     refresh_url = f"{CSV_URL}&nocache={random.randint(1, 100000)}"
     df = pd.read_csv(refresh_url)
-    # Ensure we only care about Name and Key columns
-    df = df[['Name', 'Key']]
-except Exception as e:
+    
+    # If the sheet has a Timestamp column from the form, we skip it
+    if 'Timestamp' in df.columns:
+        df = df.drop(columns=['Timestamp'])
+except Exception:
     df = pd.DataFrame(columns=["Name", "Key"])
 
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.subheader("Generate New Key")
-    u_name = st.text_input("Customer Name", placeholder="e.g. John Doe")
+    u_name = st.text_input("Customer Name")
     tier = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
     if st.button("Generate & Save to Cloud", use_container_width=True):
         if u_name:
-            # Create Key
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[tier]
-            rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-            new_key = f"RICOS-{prefix}-{rand_str}"
+            new_key = f"RICOS-{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
             
-            # Send to Google Form
+            # Send to your Google Form
             payload = {
                 "entry.1278795252": u_name, 
                 "entry.1557051665": new_key
@@ -47,12 +48,11 @@ with col1:
             try:
                 requests.post(FORM_URL, data=payload)
                 st.success(f"Successfully Created: {new_key}")
-                st.balloons()
-                st.info("Wait 5-10 seconds for the database to sync, then refresh.")
+                st.info("Wait 10 seconds, then click Refresh Table.")
             except:
-                st.error("Connection error. Please try again.")
+                st.error("Connection error.")
         else:
-            st.error("Please enter a name first!")
+            st.error("Please enter a name!")
 
 with col2:
     st.subheader("Live Database")
