@@ -6,14 +6,13 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-# Connect using the PRIVATE link from Secrets
+# Connect to the NEW sheet link provided
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load existing keys
+# Safe Read
 try:
-    # Use ttl=0 to always get the freshest keys from the sheet
     df = conn.read(ttl=0)
 except Exception:
     df = pd.DataFrame(columns=["Name", "Key"])
@@ -21,31 +20,31 @@ except Exception:
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
-    st.subheader("Generate New Key")
-    user_name = st.text_input("Customer Name / Discord ID")
-    
-    # Tier selector for your Sniper logic
-    duration = st.selectbox("Key Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+    st.subheader("Generate Key")
+    user_name = st.text_input("Customer Name")
+    duration = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
     if st.button("Generate & Auto-Save"):
         if user_name:
-            # Match the prefixes your Sniper script expects
+            # Match Sniper Logic
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
-            rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
-            new_key = f"RICOS-{prefix}-{rand_str}"
+            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            new_key = f"RICOS-{prefix}-{rand}"
             
-            # Update the Sheet
+            # Add to dataframe
             new_row = pd.DataFrame([{"Name": user_name, "Key": new_key}])
-            updated_df = pd.concat([df, new_row], ignore_index=True)
+            updated_df = pd.concat([df, new_row], ignore_index=True) if not df.empty else new_row
             
-            # Push to Google Sheets (Requires Private Link in Secrets)
-            conn.update(data=updated_df)
-            
-            st.success(f"Key saved to Cloud!")
-            st.code(new_key)
+            # Update Google Sheets
+            try:
+                conn.update(data=updated_df)
+                st.success(f"Saved: {new_key}")
+                st.rerun()
+            except Exception as e:
+                st.error("Permission Error: Did you update the link in your Streamlit Secrets?")
         else:
-            st.error("Please enter a name!")
+            st.error("Enter a name first!")
 
 with col2:
-    st.subheader("Current Keys")
+    st.subheader("Cloud Database")
     st.dataframe(df, use_container_width=True)
