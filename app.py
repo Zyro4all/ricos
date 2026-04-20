@@ -1,122 +1,54 @@
 import streamlit as st
-import os
-import json
-import secrets
-import string
-import pandas as pd
+import json, os, random, string
 
-# --- FILE PATH CONFIGURATION ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "keys_database.json")
+DB_FILE = "keys_database.json"
 
 def load_data():
-    """Load the full database."""
-    try:
-        if not os.path.exists(DB_PATH):
-            return {"keys": {}, "owner_key": "RICOS-OWNER-ADMIN-999"}
-        with open(DB_PATH, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
-        return {"keys": {}, "owner_key": "RICOS-OWNER-ADMIN-999"}
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f: return json.load(f)
+    return {"keys": {}, "names": {}, "owner_key": "RICOS-OWNER-ADMIN-999"}
 
 def save_data(data):
-    """Save the updated database back to the JSON file."""
-    with open(DB_PATH, "w") as f:
+    with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def generate_key_string():
-    """Generates a secure key string."""
-    suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(12))
-    return f"RICOS-LT-{suffix}"
+st.set_page_config(page_title="RICOS ADMIN", layout="wide")
+st.title("💀 RICOS SNIPER ADMIN PANEL")
 
-def main():
-    st.set_page_config(page_title="RICOS | ADMIN PANEL", layout="wide")
+data = load_data()
 
-    # High-End Dark UI Theme
-    st.markdown("""
-        <style>
-        .main { background-color: #080808; color: #ffffff; }
-        .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px; background-color: #111; border-radius: 5px 5px 0 0;
-            color: #58a6ff; font-weight: bold; padding: 0 20px;
-        }
-        .stTabs [aria-selected="true"] { background-color: #1f1f1f; border-bottom: 2px solid #58a6ff; }
-        div[data-testid="stMetricValue"] { color: #58a6ff; font-family: monospace; }
-        .key-box { 
-            padding: 20px; border: 1px solid #30363d; background: #0d1117; 
-            border-radius: 8px; margin-top: 20px; text-align: center;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-
-    if not st.session_state.authenticated:
-        st.markdown("<h1 style='text-align: center; color: #58a6ff;'>RICOS TERMINAL</h1>", unsafe_allow_html=True)
-        _, col, _ = st.columns([1, 1, 1])
-        with col:
-            pin = st.text_input("MASTER TOKEN", type="password")
-            if st.button("LOGIN"):
-                data = load_data()
-                if pin == data.get("owner_key"):
-                    st.session_state.authenticated = True
-                    st.rerun()
-                else:
-                    st.error("INVALID ACCESS TOKEN")
-    else:
-        st.title("📟 RICOS ADMIN DASHBOARD")
+with col1:
+    st.subheader("Generate New Key")
+    user_name = st.text_input("User Name / Discord")
+    duration = st.selectbox("Duration", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+    
+    if st.button("Generate & Save"):
+        prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
+        random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        new_key = f"RICOS-{prefix}-{random_str}"
         
-        tab1, tab2 = st.tabs(["⚡ KEY GENERATOR", "📂 KEY DATABASE"])
+        # Save to database
+        data["keys"][new_key] = duration
+        data["names"][new_key] = user_name if user_name else "Unknown"
+        save_data(data)
+        st.success(f"Generated: {new_key}")
+        st.code(new_key)
 
-        with tab1:
-            st.subheader("Create Subscription Token")
-            col_a, col_b = st.columns([1, 1])
-            
-            with col_a:
-                # Added the durations you requested
-                duration = st.selectbox("Select Duration", ["1 Day", "1 Week", "1 Month", "Lifetime"])
-                if st.button("CREATE KEY"):
-                    new_key = generate_key_string()
-                    data = load_data()
-                    # Store duration as the value in the dictionary
-                    data["keys"][new_key] = duration
-                    save_data(data)
-                    st.session_state.last_key = new_key
-                    st.rerun()
-
-            with col_b:
-                if 'last_key' in st.session_state:
-                    st.markdown(f"""
-                        <div class="key-box">
-                            <p style="color: #8b949e; margin-bottom: 5px;">SUCCESSFULLY GENERATED</p>
-                            <h2 style="color: #3fb950; letter-spacing: 2px;">{st.session_state.last_key}</h2>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-        with tab2:
-            st.subheader("Manage Active Access")
-            data = load_data()
-            keys_dict = data.get("keys", {})
-            
-            if keys_dict:
-                # Convert the database into a clean table for the UI
-                df = pd.DataFrame(list(keys_dict.items()), columns=["License Key", "Duration"])
-                st.dataframe(df, use_container_width=True, height=400)
-                
-                col_c, col_d = st.columns([1, 4])
-                with col_c:
-                    if st.button("🗑️ WIPE ALL KEYS"):
-                        data["keys"] = {}
-                        save_data(data)
-                        st.rerun()
-            else:
-                st.info("No active keys found in keys_database.json.")
-
-        if st.sidebar.button("LOGOUT"):
-            st.session_state.authenticated = False
-            st.rerun()
-
-if __name__ == "__main__":
-    main()
+with col2:
+    st.subheader("Key Database")
+    if not data["keys"]:
+        st.info("No active keys found.")
+    else:
+        for key, dur in list(data["keys"].items()):
+            name = data["names"].get(key, "N/A")
+            c1, c2, c3 = st.columns([2, 1, 1])
+            c1.text(f"👤 {name}\n🔑 {key}")
+            c2.text(f"⏳ {dur}")
+            if c3.button("DELETE", key=f"del_{key}"):
+                del data["keys"][key]
+                if key in data["names"]: del data["names"][key]
+                save_data(data)
+                st.rerun()
+            st.divider()
