@@ -3,7 +3,7 @@ import os
 import json
 
 # --- FILE PATH CONFIGURATION ---
-# This ensures the app finds the JSON file regardless of where it's hosted
+# This ensures the app finds the JSON file on the Streamlit server
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "keys_database.json")
 
@@ -15,39 +15,38 @@ def load_keys():
         with open(DB_PATH, "r") as f:
             return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
-        # Handles errors seen in image_08b0e1.png and image_08c306.png
+        # Prevents the 'line 1 column 1' crash
         return {"keys": {}}
 
 def main():
     st.set_page_config(page_title="RICOS SNIPER | AUTHENTICATION", layout="wide")
     
-    # Custom CSS to match your dark theme
+    # Corrected CSS section - fixed the 'unsafe_allow_html' error
     st.markdown("""
         <style>
         .main { background-color: #000000; color: white; }
         div.stButton > button { width: 100%; background-color: #111; border: 1px solid #333; color: white; }
         </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True)
 
-    # UI Layout based on image_08b0e1.png
+    # UI Layout based on your design
     col1, col2 = st.columns([1, 1])
 
     with col1:
         st.header("AUTHORIZATION")
         
         user_key = st.text_input("ENTER KEY", placeholder="RICOS-LT-XXXXXX")
-        remember_me = st.checkbox("Remember Me", value=True)
+        st.checkbox("Remember Me", value=True)
         
         if st.button("SIGN IN"):
             data = load_keys()
             allowed_keys = data.get("keys", {})
             
-            # Check if key exists in your database
+            # Checks against your actual keys
             if user_key in allowed_keys:
-                st.success(f"Welcome! Access Level: {allowed_keys[user_key]}")
-                # Add your main tool logic here
+                st.success(f"Access Granted! Level: {allowed_keys[user_key]}")
             else:
-                st.error("Invalid Key. Please check your database.")
+                st.error("Invalid Key. Access Denied.")
 
     with col2:
         st.header("NEWS")
