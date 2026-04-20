@@ -4,7 +4,6 @@ import json
 import secrets
 import string
 import pandas as pd
-from datetime import datetime
 
 # --- FILE PATH CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,27 +24,28 @@ def save_data(data):
     with open(DB_PATH, "w") as f:
         json.dump(data, f, indent=4)
 
-def generate_key():
-    """Generates a secure key in the RICOS-LT-XXXX format."""
-    suffix = ''.join(secrets.choice(string.get_encoding('ascii') + string.digits) for _ in range(12)).upper()
+def generate_key_string():
+    """Generates a secure key string."""
+    suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(12))
     return f"RICOS-LT-{suffix}"
 
 def main():
-    st.set_page_config(page_title="RICOS | KEY GENERATOR", layout="wide")
+    st.set_page_config(page_title="RICOS | ADMIN PANEL", layout="wide")
 
-    # Ultra-Modern Cyberpunk UI
+    # High-End Dark UI Theme
     st.markdown("""
         <style>
-        .main { background-color: #050505; color: #00FF41; font-family: 'Courier New', monospace; }
-        .stButton > button { 
-            background: linear-gradient(45deg, #0f0f0f, #1a1a1a);
-            color: #00FF41; border: 1px solid #00FF41;
-            border-radius: 2px; height: 3em; transition: 0.3s;
+        .main { background-color: #080808; color: #ffffff; }
+        .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px; background-color: #111; border-radius: 5px 5px 0 0;
+            color: #58a6ff; font-weight: bold; padding: 0 20px;
         }
-        .stButton > button:hover { box-shadow: 0 0 15px #00FF41; color: white; }
-        .key-card { 
-            padding: 20px; border: 1px solid #333; background: #111; 
-            border-radius: 10px; text-align: center; margin-bottom: 20px;
+        .stTabs [aria-selected="true"] { background-color: #1f1f1f; border-bottom: 2px solid #58a6ff; }
+        div[data-testid="stMetricValue"] { color: #58a6ff; font-family: monospace; }
+        .key-box { 
+            padding: 20px; border: 1px solid #30363d; background: #0d1117; 
+            border-radius: 8px; margin-top: 20px; text-align: center;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -54,54 +54,67 @@ def main():
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
-        st.markdown("<h1 style='text-align: center;'>SYSTEM AUTHENTICATION</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: #58a6ff;'>RICOS TERMINAL</h1>", unsafe_allow_html=True)
         _, col, _ = st.columns([1, 1, 1])
         with col:
-            pin = st.text_input("MASTER ACCESS TOKEN", type="password")
-            if st.button("BYPASS FIREWALL"):
+            pin = st.text_input("MASTER TOKEN", type="password")
+            if st.button("LOGIN"):
                 data = load_data()
                 if pin == data.get("owner_key"):
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
-                    st.error("ACCESS DENIED")
+                    st.error("INVALID ACCESS TOKEN")
     else:
-        # --- LOGGED IN: KEY GENERATOR PANEL ---
-        st.title("📟 RICOS KEY COMMAND CENTER")
+        st.title("📟 RICOS ADMIN DASHBOARD")
         
-        col1, col2 = st.columns([1, 2])
+        tab1, tab2 = st.tabs(["⚡ KEY GENERATOR", "📂 KEY DATABASE"])
 
-        with col1:
-            st.markdown("<div class='key-card'>", unsafe_allow_html=True)
-            st.subheader("GENERATE NEW ACCESS")
-            perm_level = st.selectbox("Permission Level", [1, 999, 9999])
+        with tab1:
+            st.subheader("Create Subscription Token")
+            col_a, col_b = st.columns([1, 1])
             
-            if st.button("GENERATE NEW KEY"):
-                new_key = generate_key()
-                data = load_data()
-                data["keys"][new_key] = perm_level
-                save_data(data)
-                st.success(f"NEW KEY CREATED:\n{new_key}")
-            st.markdown("</div>", unsafe_allow_html=True)
+            with col_a:
+                # Added the durations you requested
+                duration = st.selectbox("Select Duration", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+                if st.button("CREATE KEY"):
+                    new_key = generate_key_string()
+                    data = load_data()
+                    # Store duration as the value in the dictionary
+                    data["keys"][new_key] = duration
+                    save_data(data)
+                    st.session_state.last_key = new_key
+                    st.rerun()
 
-        with col2:
-            st.subheader("ACTIVE DATABASE")
+            with col_b:
+                if 'last_key' in st.session_state:
+                    st.markdown(f"""
+                        <div class="key-box">
+                            <p style="color: #8b949e; margin-bottom: 5px;">SUCCESSFULLY GENERATED</p>
+                            <h2 style="color: #3fb950; letter-spacing: 2px;">{st.session_state.last_key}</h2>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        with tab2:
+            st.subheader("Manage Active Access")
             data = load_data()
             keys_dict = data.get("keys", {})
             
             if keys_dict:
-                df = pd.DataFrame(list(keys_dict.items()), columns=["Key String", "Level"])
-                # Displaying the keys in a clean, modern table
-                st.dataframe(df, use_container_width=True)
+                # Convert the database into a clean table for the UI
+                df = pd.DataFrame(list(keys_dict.items()), columns=["License Key", "Duration"])
+                st.dataframe(df, use_container_width=True, height=400)
                 
-                if st.button("CLEAR ALL KEYS (DANGER)"):
-                    data["keys"] = {}
-                    save_data(data)
-                    st.rerun()
+                col_c, col_d = st.columns([1, 4])
+                with col_c:
+                    if st.button("🗑️ WIPE ALL KEYS"):
+                        data["keys"] = {}
+                        save_data(data)
+                        st.rerun()
             else:
-                st.info("No active keys found in database.")
+                st.info("No active keys found in keys_database.json.")
 
-        if st.sidebar.button("TERMINATE SESSION"):
+        if st.sidebar.button("LOGOUT"):
             st.session_state.authenticated = False
             st.rerun()
 
