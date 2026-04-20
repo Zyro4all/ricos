@@ -1,52 +1,47 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import requests
 import random
 import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-# 1. Establish connection
-conn = st.connection("gsheets", type=GSheetsConnection)
+# The URL from your Secrets
+SHEET_URL = st.secrets["spreadsheet_url"]
+# This is your Public CSV link for READING data (from Image 2)
+CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiZQMUDlM2wFrShtweDCgyTVkio04jMNX35Z-HUa35GasTfaPu-H7pNb_gQHSTLOqXeFAVMLBzQKc9/pub?output=csv"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# 2. Safe Read with cache clearing
+# Load data simply using pandas
 try:
-    df = conn.read(ttl=0)
-except Exception as e:
-    st.warning("Sheet is currently empty or connecting...")
+    df = pd.read_csv(CSV_URL)
+except:
     df = pd.DataFrame(columns=["Name", "Key"])
 
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.subheader("Generate New Key")
-    user_name = st.text_input("Customer Name")
-    duration = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+    u_name = st.text_input("Customer Name")
+    tier = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
-    if st.button("Generate & Auto-Save"):
-        if user_name:
-            # Create Key
-            prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
+    st.info("To save: Copy the key below and paste it into your Google Sheet manually for now, or use the 'Form' method.")
+    
+    if st.button("Generate Key"):
+        if u_name:
+            prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[tier]
             rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
             new_key = f"RICOS-{prefix}-{rand}"
             
-            # Prepare data
-            new_row = pd.DataFrame([{"Name": user_name, "Key": new_key}])
-            updated_df = pd.concat([df, new_row], ignore_index=True)
-            
-            # 3. The Update (Requires "Editor" permission on the sheet)
-            try:
-                conn.update(data=updated_df)
-                st.success(f"Successfully saved: {new_key}")
-                st.balloons()
-                st.rerun()
-            except Exception as e:
-                st.error("STILL NO PERMISSION: You must click 'Share' in Google Sheets and set 'Anyone with the link' to 'EDITOR'.")
+            st.success("Key Generated!")
+            st.code(new_key)
+            st.warning("Since Google is blocking the auto-save, please paste this into row " + str(len(df)+2) + " of your sheet.")
         else:
-            st.error("Please enter a name!")
+            st.error("Enter a name!")
 
 with col2:
-    st.subheader("Live Database")
+    st.subheader("Live Database (Refresh to update)")
     st.dataframe(df, use_container_width=True)
+    if st.button("Refresh Table"):
+        st.rerun()
