@@ -1,41 +1,50 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
 import string
 
-# Your actual published CSV link
-CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiZQMUDlM2wFrShtweDCgyTVkio04jMNX35Z-HUa35GasTfaPu-H7pNb_gQHSTLOqXeFAVMLBzQKc9/pub?output=csv"
-
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-st.title("💀 RICOS SNIPER | ADMIN PANEL")
+# Connect to the sheet using the Secret you just added
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Function to load the data from the web link
-def load_data():
-    try:
-        return pd.read_csv(CSV_URL)
-    except:
-        return pd.DataFrame(columns=["Name", "Key"])
+st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-df = load_data()
+# Load existing keys
+try:
+    df = conn.read()
+except:
+    df = pd.DataFrame(columns=["Name", "Key"])
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.subheader("Generate Key")
-    user_name = st.text_input("User Name / Discord")
+    user_name = st.text_input("Customer Name")
     
-    if st.button("Generate New Key"):
+    # Duration Selector
+    duration = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+    
+    if st.button("Generate & Auto-Save"):
         if user_name:
-            new_key = f"RICOS-LT-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
-            st.success(f"Key Generated for {user_name}:")
+            # Create Key
+            prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
+            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            new_key = f"RICOS-{prefix}-{rand}"
+            
+            # Add to Sheet
+            new_row = pd.DataFrame([{"Name": user_name, "Key": new_key}])
+            updated_df = pd.concat([df, new_row], ignore_index=True)
+            
+            # This pushes it to the Google Sheet automatically
+            conn.update(data=updated_df)
+            
+            st.success(f"Saved to Google Sheets!")
             st.code(new_key)
-            st.warning("⚠️ Manual Step: Copy this key and paste it into your Google Sheet row.")
         else:
             st.error("Enter a name first!")
 
 with col2:
-    st.subheader("Current Database (Read Only)")
+    st.subheader("Current Keys")
     st.dataframe(df, use_container_width=True)
-    if st.button("Refresh List"):
-        st.rerun()
