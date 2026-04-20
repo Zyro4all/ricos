@@ -6,12 +6,12 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-# Connect to the sheet using the Secret you just added
+# Connect using the Secret link
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load existing keys
+# Load existing data
 try:
     df = conn.read()
 except:
@@ -20,31 +20,29 @@ except:
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
-    st.subheader("Generate Key")
+    st.subheader("Generate New Key")
     user_name = st.text_input("Customer Name")
     
-    # Duration Selector
+    # Duration Selector added
     duration = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
     if st.button("Generate & Auto-Save"):
         if user_name:
-            # Create Key
+            # Create Key based on Tier
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
-            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
             new_key = f"RICOS-{prefix}-{rand}"
             
-            # Add to Sheet
+            # Add to dataframe and push to Google Sheets
             new_row = pd.DataFrame([{"Name": user_name, "Key": new_key}])
             updated_df = pd.concat([df, new_row], ignore_index=True)
             
-            # This pushes it to the Google Sheet automatically
             conn.update(data=updated_df)
-            
-            st.success(f"Saved to Google Sheets!")
+            st.success(f"Successfully saved to Google Sheets!")
             st.code(new_key)
         else:
             st.error("Enter a name first!")
 
 with col2:
-    st.subheader("Current Keys")
+    st.subheader("Live Database")
     st.dataframe(df, use_container_width=True)
