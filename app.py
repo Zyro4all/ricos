@@ -6,22 +6,17 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide", page_icon="💀")
 
-# --- YOUR CUSTOM LINKS ---
-# The new link you just gave me
+# --- YOUR LINKS ---
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3ni_JieyfjhMrwxKeSI2seJBb9xWPEfNPpiw1I09EkivalS4uAA6Sfy-S18Gs5Xgl9ICFHTmT5mS/pub?output=csv"
-
-# Your Form submission link
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMaWmzPd-VnCu75dkYn-DYqPSgmyfcEC_uC-10E1sRD-BfSg/formResponse"
+SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/1VByNd7cFDO62STXib2h8s1L4YTyfmxygcymCOMBeAvE/edit"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load data with a 'cache-buster' so it doesn't show old data
+# Load data
 try:
-    # Adding a random number to the URL forces Google to refresh the data
     refresh_url = f"{CSV_URL}&nocache={random.randint(1, 100000)}"
     df = pd.read_csv(refresh_url)
-    
-    # If the sheet has a Timestamp column from the form, we skip it
     if 'Timestamp' in df.columns:
         df = df.drop(columns=['Timestamp'])
 except Exception:
@@ -34,25 +29,26 @@ with col1:
     u_name = st.text_input("Customer Name")
     tier = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
-    if st.button("Generate & Save to Cloud", use_container_width=True):
+    if st.button("🚀 Generate & Save", use_container_width=True):
         if u_name:
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[tier]
             new_key = f"RICOS-{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
-            
-            # Send to your Google Form
-            payload = {
-                "entry.1278795252": u_name, 
-                "entry.1557051665": new_key
-            }
+            payload = {"entry.1278795252": u_name, "entry.1557051665": new_key}
             
             try:
                 requests.post(FORM_URL, data=payload)
-                st.success(f"Successfully Created: {new_key}")
-                st.info("Wait 10 seconds, then click Refresh Table.")
+                st.success(f"Saved: {new_key}")
+                st.rerun()
             except:
-                st.error("Connection error.")
+                st.error("Error saving.")
         else:
-            st.error("Please enter a name!")
+            st.error("Enter a name!")
+
+    st.divider()
+    st.subheader("Manage Data")
+    st.info("Google security prevents deleting directly from here.")
+    # This button opens your spreadsheet directly to the correct tab
+    st.link_button("🗑️ Open Database to Delete Keys", SHEET_EDIT_URL, use_container_width=True)
 
 with col2:
     st.subheader("Live Database")
