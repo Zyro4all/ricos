@@ -6,42 +6,56 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-# The URL from your Secrets
-SHEET_URL = st.secrets["spreadsheet_url"]
-# This is your Public CSV link for READING data (from Image 2)
-CSV_URL = "https://docs.google.com/spreadsheets/d/1VByNd7cFDO62STXib2h8s1L4YTyfmxygcymCOMBeAvE/edit?usp=sharing"
+# --- THE LINKS ---
+# This is the link you just sent me
+CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiZQMUDlM2wFrShtweDCgyTVkio04jMNX35Z-HUa35GasTfaPu-H7pNb_gQHSTLOqXeFAVMLBzQKc9/pub?output=csv"
+
+# This is your Form ID from earlier
+FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMaWmzPd-VnCu75dkYn-DYqPSgmyfcEC_uC-10E1sRD-BfSg/formResponse"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load data simply using pandas
+# Load data
 try:
-    df = pd.read_csv(CSV_URL)
+    # We add a random number to the URL so it doesn't show old, cached data
+    df = pd.read_csv(f"{CSV_URL}&refresh={random.randint(1,1000)}")
 except:
     df = pd.DataFrame(columns=["Name", "Key"])
 
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
-    st.subheader("Generate New Key")
+    st.subheader("Generate & Save")
     u_name = st.text_input("Customer Name")
     tier = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
-    st.info("To save: Copy the key below and paste it into your Google Sheet manually for now, or use the 'Form' method.")
-    
-    if st.button("Generate Key"):
+    if st.button("Generate & Save"):
         if u_name:
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[tier]
-            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-            new_key = f"RICOS-{prefix}-{rand}"
+            new_key = f"RICOS-{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
             
-            st.success("Key Generated!")
-            st.code(new_key)
-            st.warning("Since Google is blocking the auto-save, please paste this into row " + str(len(df)+2) + " of your sheet.")
+            # --- SEND TO GOOGLE FORM ---
+            payload = {
+                "entry.1278795252": u_name, 
+                "entry.1557051665": new_key
+            }
+            
+            try:
+                requests.post(FORM_URL, data=payload)
+                st.success(f"Key Saved: {new_key}")
+                st.info("Wait 10 seconds, then click Refresh.")
+            except:
+                st.error("Submission failed.")
         else:
             st.error("Enter a name!")
 
 with col2:
-    st.subheader("Live Database (Refresh to update)")
-    st.dataframe(df, use_container_width=True)
+    st.subheader("Live Database")
+    # We only show the Name and Key columns to keep it clean
+    if not df.empty:
+        st.dataframe(df[["Name", "Key"]], use_container_width=True)
+    else:
+        st.write("No keys found yet. Try generating one!")
+        
     if st.button("Refresh Table"):
         st.rerun()
