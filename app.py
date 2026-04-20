@@ -6,43 +6,46 @@ import string
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide")
 
-# Connect using the Secret link
+# Connect using the PRIVATE link from Secrets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
-# Load existing data
+# Load existing keys
 try:
-    df = conn.read()
-except:
+    # Use ttl=0 to always get the freshest keys from the sheet
+    df = conn.read(ttl=0)
+except Exception:
     df = pd.DataFrame(columns=["Name", "Key"])
 
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.subheader("Generate New Key")
-    user_name = st.text_input("Customer Name")
+    user_name = st.text_input("Customer Name / Discord ID")
     
-    # Duration Selector added
-    duration = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
+    # Tier selector for your Sniper logic
+    duration = st.selectbox("Key Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
     if st.button("Generate & Auto-Save"):
         if user_name:
-            # Create Key based on Tier
+            # Match the prefixes your Sniper script expects
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[duration]
-            rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
-            new_key = f"RICOS-{prefix}-{rand}"
+            rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+            new_key = f"RICOS-{prefix}-{rand_str}"
             
-            # Add to dataframe and push to Google Sheets
+            # Update the Sheet
             new_row = pd.DataFrame([{"Name": user_name, "Key": new_key}])
             updated_df = pd.concat([df, new_row], ignore_index=True)
             
+            # Push to Google Sheets (Requires Private Link in Secrets)
             conn.update(data=updated_df)
-            st.success(f"Successfully saved to Google Sheets!")
+            
+            st.success(f"Key saved to Cloud!")
             st.code(new_key)
         else:
-            st.error("Enter a name first!")
+            st.error("Please enter a name!")
 
 with col2:
-    st.subheader("Live Database")
+    st.subheader("Current Keys")
     st.dataframe(df, use_container_width=True)
