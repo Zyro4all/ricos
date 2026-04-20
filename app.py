@@ -9,7 +9,7 @@ st.set_page_config(page_title="RICOS ADMIN", layout="wide", page_icon="💀")
 # --- YOUR LINKS ---
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-3ni_JieyfjhMrwxKeSI2seJBb9xWPEfNPpiw1I09EkivalS4uAA6Sfy-S18Gs5Xgl9ICFHTmT5mS/pub?output=csv"
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMaWmzPd-VnCu75dkYn-DYqPSgmyfcEC_uC-10E1sRD-BfSg/formResponse"
-SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/1MWvqAThqoy5piugzU4iojl4lXUWtXPecPnkyqKzjQUA/edit?usp=sharing"
+SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/1VByNd7cFDO62STXib2h8s1L4YTyfmxygcymCOMBeAvE/edit"
 
 st.title("💀 RICOS SNIPER | CLOUD ADMIN")
 
