@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import random
 import string
+import time
 
 st.set_page_config(page_title="RICOS ADMIN", layout="wide", page_icon="💀")
 
@@ -25,33 +26,48 @@ except Exception:
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
-    st.subheader("Generate New Key")
-    u_name = st.text_input("Customer Name")
+    st.subheader("Generate Keys")
+    u_name = st.text_input("Customer Name (or Batch Name)")
     tier = st.selectbox("Tier", ["1 Day", "1 Week", "1 Month", "Lifetime"])
     
-    if st.button("🚀 Generate & Save", use_container_width=True):
+    # --- ADDED QUANTITY INPUT ---
+    num_to_gen = st.number_input("Quantity to generate", min_value=1, max_value=50, value=1)
+    
+    if st.button(f"🚀 Generate {num_to_gen} Key(s)", use_container_width=True):
         if u_name:
             prefix = {"1 Day": "1D", "1 Week": "1W", "1 Month": "1M", "Lifetime": "LT"}[tier]
-            new_key = f"RICOS-{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
-            payload = {"entry.1278795252": u_name, "entry.1557051665": new_key}
             
-            try:
-                requests.post(FORM_URL, data=payload)
-                st.success(f"Saved: {new_key}")
+            success_count = 0
+            progress_bar = st.progress(0)
+            
+            # --- LOOP FOR MULTIPLE KEYS ---
+            for i in range(num_to_gen):
+                # Unique key for each iteration
+                new_key = f"RICOS-{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=10))}"
+                payload = {"entry.1278795252": u_name, "entry.1557051665": new_key}
+                
+                try:
+                    requests.post(FORM_URL, data=payload)
+                    success_count += 1
+                except:
+                    st.error(f"Failed to save key {i+1}")
+                
+                # Update progress
+                progress_bar.progress((i + 1) / num_to_gen)
+            
+            if success_count > 0:
+                st.success(f"Successfully generated {success_count} keys for {u_name}!")
+                time.sleep(1) # Small delay to let Google Sheet update
                 st.rerun()
-            except:
-                st.error("Error saving.")
         else:
             st.error("Enter a name!")
 
     st.divider()
     st.subheader("Manage Data")
-    st.info("Google security prevents deleting directly from here.")
-    # This button opens your spreadsheet directly to the correct tab
     st.link_button("🗑️ Open Database to Delete Keys", SHEET_EDIT_URL, use_container_width=True)
 
 with col2:
     st.subheader("Live Database")
-    st.dataframe(df, use_container_width=True, height=400)
+    st.dataframe(df, use_container_width=True, height=500)
     if st.button("🔄 Refresh Table", use_container_width=True):
         st.rerun()
